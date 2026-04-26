@@ -25,6 +25,6 @@ This repo contains the source code of paper: *SERE: Structural Example Retrieval
 3. Run `utils/dataset_preprocess.py` to process the data (make sure to set the relevant parameters and variables at the beginning and end of the Python script).  
 
 
-## Inference
+# Inference
 
 Run `sere.py` to perform inference (make sure to set the relevant parameters and variables at the end of the script).
