@@ -1,3 +1,7 @@
+# SERE
+
+This repo contains the source code of paper: *SERE: Structural Example Retrieval for Enhancing LLMs in Event Causality Identification*, Findings of ACL 2026.
+
 # Environment Setup
 
 1. Run `pip install -r requirements.txt` to install the Python dependencies.  
