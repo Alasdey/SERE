@@ -1,0 +1,14 @@
+joblib
+tqdm_joblib
+openai
+scikit-learn
+pandas
+python-dotenv
+zss
+spacy
+lxml
+torch
+neo4j
+python-Levenshtein
+chromadb
+rank-bm25
