@@ -68,6 +68,7 @@ def test_all(full_test_path: str, full_train_path: str, output_path: str, infere
     with tqdm_joblib(total=len(test_set)):
         Parallel(n_jobs=10, backend='threading')(delayed(test_loop)(item) for item in test_set)
 
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, mode='w', encoding='utf-8') as f:
         f.writelines(json.dumps(data, ensure_ascii=False) + '\n' for data in test_set)
 
@@ -79,10 +80,10 @@ if __name__ == '__main__':
 
     METHOD_NAME = 'weighted_unified'
 
-    FULL_TEST_PATH = r'dataset\{dataset_name}\full_test.jsonl'.format(dataset_name=DATASET_NAME)
-    FULL_TRAIN_PATH = r'dataset\{dataset_name}\full_train.jsonl'.format(dataset_name=DATASET_NAME)
+    FULL_TEST_PATH = 'dataset/{dataset_name}/full_test.jsonl'.format(dataset_name=DATASET_NAME)
+    FULL_TRAIN_PATH = 'dataset/{dataset_name}/full_train.jsonl'.format(dataset_name=DATASET_NAME)
 
-    OUTPUT_PATH = r'dataset\{dataset_name}\results\{method_name}.jsonl'.format(dataset_name=DATASET_NAME, method_name=METHOD_NAME)
+    OUTPUT_PATH = 'dataset/{dataset_name}/results/{method_name}.jsonl'.format(dataset_name=DATASET_NAME, method_name=METHOD_NAME)
 
     K = 2
 

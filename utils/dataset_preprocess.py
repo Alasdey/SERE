@@ -150,6 +150,15 @@ def add_pattern_inference(dataset_path: str, llm_name: str) -> None:
 
 
 def add_conceptnet_node(dataset_path: str) -> None:
+    # ConceptNet/Neo4j not available — write empty placeholders so downstream steps don't KeyError
+    dataset = path_to_dataset(dataset_path)
+    for data in dataset:
+        data.setdefault('source_node', ['', 0.0])
+        data.setdefault('target_node', ['', 0.0])
+    with open(dataset_path, mode='w', encoding='utf-8') as f:
+        f.writelines(json.dumps(data, ensure_ascii=False) + '\n' for data in dataset)
+    return
+
     if os.path.exists(CONCEPTNET_NODES_SAVE_PATH):
         conceptnet_vec_db = ConceptnetVecDB.load(CONCEPTNET_NODES_SAVE_PATH)
     else:
@@ -174,7 +183,16 @@ def add_conceptnet_node(dataset_path: str) -> None:
         f.writelines(json.dumps(data, ensure_ascii=False) + '\n' for data in dataset)
 
 
-def add_concept_path(dataset_path: str, max_path_len: int = 10,  node_threshold: float = 0.6) -> None:
+def add_concept_path(dataset_path: str, max_path_len: int = 10, node_threshold: float = 0.6) -> None:
+    # ConceptNet/Neo4j not available — write empty paths so downstream scoring returns 0
+    dataset = path_to_dataset(dataset_path)
+    for data in dataset:
+        data.setdefault('conceptnet_path', '')
+    with open(dataset_path, mode='w', encoding='utf-8') as f:
+        f.writelines(json.dumps(data, ensure_ascii=False) + '\n' for data in dataset)
+    return
+
+
     def parse_path(path_list: list[dict[str, str] | str], rel_list: list[dict[str, str]]) -> str:
         nodes_list = [item['id'] for item in path_list if isinstance(item, dict)]
         rel_map = {f'{item["start"]}@to@{item["end"]}': item for item in rel_list}
@@ -375,8 +393,8 @@ def add_filtered_weighted_unified_examples(full_test_path: str, full_train_path:
 
 if __name__ == '__main__':
     def main(dataset_name: str) -> None:
-        FULL_TEST_PATH = r'dataset\{dataset_name}\full_test.jsonl'.format(dataset_name=dataset_name)
-        FULL_TRAIN_PATH = r'dataset\{dataset_name}\full_train.jsonl'.format(dataset_name=dataset_name)
+        FULL_TEST_PATH = 'dataset/{dataset_name}/full_test.jsonl'.format(dataset_name=dataset_name)
+        FULL_TRAIN_PATH = 'dataset/{dataset_name}/full_train.jsonl'.format(dataset_name=dataset_name)
 
         LLM_NAME = os.environ.get('GPT_4O_MINI_NAME')
 

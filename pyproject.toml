@@ -1,0 +1,22 @@
+[project]
+name = "sere"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.4.1",
+    "joblib>=1.5.3",
+    "neo4j>=6.2.0",
+    "openai>=2.41.1",
+    "pandas>=3.0.3",
+    "python-dotenv>=1.2.2",
+    "python-levenshtein>=0.27.3",
+    "scikit-learn>=1.9.0",
+    "spacy>=3.8.14",
+    "tiktoken>=0.13.0",
+    "torch>=2.12.0",
+    "tqdm-joblib>=0.0.5",
+    "transformers>=5.12.1",
+    "zss>=1.2.0",
+]

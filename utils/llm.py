@@ -10,7 +10,7 @@ import tiktoken
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'env.env'))
 
 
-GPT_KEY = os.environ.get('GPT_4O_MINI_KEY')
+GPT_KEY = os.environ.get('OPENROUTER_API_KEY')
 GPT_4O_MINI_NAME = os.environ.get('GPT_4O_MINI_NAME')
 GPT_4O_ENCODING_NAME = os.environ.get('GPT_4O_ENCODING_NAME')
 
@@ -29,7 +29,7 @@ def num_tokens_from_string(s: str, encoding_name: str=None, model_name: str=None
 
 class GPT4oMini:
     def __init__(self) -> None:
-        self._client = OpenAI(api_key=GPT_KEY)
+        self._client = OpenAI(api_key=GPT_KEY, base_url='https://openrouter.ai/api/v1')
         self._model_name = GPT_4O_MINI_NAME
         self._encoding_name = GPT_4O_ENCODING_NAME
 
@@ -52,12 +52,15 @@ class GPT4oMini:
 
         resp = completion.choices[0].message.content
 
-        input_token_cost = num_tokens_from_string(system_prompt + question, self._encoding_name)
-        output_token_cost = num_tokens_from_string(resp, self._encoding_name)
+        try:
+            input_token_cost = num_tokens_from_string(system_prompt + question, self._encoding_name)
+            output_token_cost = num_tokens_from_string(resp, self._encoding_name)
+        except Exception:
+            input_token_cost = 0
+            output_token_cost = 0
 
         return resp, {'input': input_token_cost, 'output': output_token_cost}
 
 
 def get_llm(name: str) -> object:
-    if name == GPT_4O_MINI_NAME:
-        return GPT4oMini()
+    return GPT4oMini()
