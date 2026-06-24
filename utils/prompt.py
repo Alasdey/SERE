@@ -199,7 +199,7 @@ Give your reasoning path step-by-step (and analyze all the pattern rules ONE-BY-
     return prompt
 
 
-def predict_by_structured_examples_prompt(text: str, source: str, target: str, examples: list[dict[str, Any]]) -> str:
+def predict_by_structured_examples_prompt(text: str, source: str, target: str, examples: list[dict[str, Any]], use_cot: bool = False) -> str:
     instruction_prompt = '''Given a text, two events (Event X and Event Y). Based on the related examples, you need to determine whether there is a causal relationship between the given events X and Y. Please follow the instructions below and refer to the provided examples when answering.
 ###
 Instructions:
@@ -214,13 +214,25 @@ Event Y: {target};
 Answer: {{"Answer": "{answer}"}}
 '''
 
+    # Used when use_cot=True and the example carries a synthesized 'cot' field (see
+    # utils/cot_synthesis.py), so the fewshot demonstrates a reasoning path rather than a bare label.
+    example_prompt_cot = '''***Example {idx}***
+Text: {text};
+Event X: {source};
+Event Y: {target};
+Reasoning: {cot}
+Answer: {{"Answer": "{answer}"}}
+'''
+
+    example_template = example_prompt_cot if use_cot else example_prompt
 
     examples_prompt = ''
     for idx, e in enumerate(examples, start=1):
-        examples_prompt += example_prompt.format(idx=idx,
+        examples_prompt += example_template.format(idx=idx,
                                                                text=e['input_text'],
                                                                source=e['source'],
                                                                target=e['target'],
+                                                               cot=e.get('cot', ''),
                                                                answer='Yes' if e['ground'] == 1 else 'No') + '\n'
 
     prompt = '''{instruction_prompt}

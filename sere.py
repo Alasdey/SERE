@@ -12,6 +12,7 @@ from tqdm_joblib import tqdm_joblib
 from utils.retrievers import WeightedUnifiedRetriever
 from utils.prompt import predict_by_structured_examples_prompt
 from utils.llm import get_llm
+from utils.cot_synthesis import synthesize_cot_for_examples, get_cached_cot
 
 random.seed(42)
 
@@ -30,7 +31,8 @@ def path_to_dataset(dataset_path: str) -> list[dict[str, Any]]:
         return [json.loads(line) for line in f]
 
 
-def test_all(full_test_path: str, full_train_path: str, output_path: str, inference_llm_name: str, k: int) -> None:
+def test_all(full_test_path: str, full_train_path: str, output_path: str, inference_llm_name: str, k: int,
+             use_cot: bool = False, cot_cache_path: str | None = None) -> None:
     def test_loop(data: dict[str, Any]) -> None:
         """
         used for multi thread
@@ -41,7 +43,8 @@ def test_all(full_test_path: str, full_train_path: str, output_path: str, infere
         prompt = predict_by_structured_examples_prompt(data['input_text'],
                                                              data['source'],
                                                              data['target'],
-                                                             unified_weighted_examples)
+                                                             unified_weighted_examples,
+                                                             use_cot=use_cot)
 
         llm_resp, token_cost = llm.response(prompt)
         try:
@@ -65,6 +68,23 @@ def test_all(full_test_path: str, full_train_path: str, output_path: str, infere
     test_set = path_to_dataset(full_test_path)
     train_set = path_to_dataset(full_train_path)
 
+    if use_cot:
+        # Synthesize CoT once for the deduplicated set of training examples that will actually
+        # be retrieved as fewshots across the whole test set, then re-attach via the disk/memory
+        # cache so every test_loop call reuses the same reasoning per example.
+        needed_ids = set()
+        needed_examples = []
+        for data in test_set:
+            for e in weighted_unified_retriever.retrieve_samples(data, train_set, k):
+                if e['unique_id'] not in needed_ids:
+                    needed_ids.add(e['unique_id'])
+                    needed_examples.append(e)
+
+        synthesize_cot_for_examples(needed_examples, llm, cache_path=cot_cache_path)
+
+        for e in train_set:
+            e['cot'] = get_cached_cot(e['unique_id'])
+
     with tqdm_joblib(total=len(test_set)):
         Parallel(n_jobs=10, backend='threading')(delayed(test_loop)(item) for item in test_set)
 
@@ -87,4 +107,8 @@ if __name__ == '__main__':
 
     K = 2
 
-    test_all(FULL_TEST_PATH, FULL_TRAIN_PATH, OUTPUT_PATH, PREPROCESS_LLM_NAME, K)
+    USE_COT = False
+    COT_CACHE_PATH = 'dataset/{dataset_name}/cot_cache.json'.format(dataset_name=DATASET_NAME)
+
+    test_all(FULL_TEST_PATH, FULL_TRAIN_PATH, OUTPUT_PATH, PREPROCESS_LLM_NAME, K,
+             use_cot=USE_COT, cot_cache_path=COT_CACHE_PATH)
