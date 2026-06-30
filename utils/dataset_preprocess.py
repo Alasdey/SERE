@@ -391,32 +391,30 @@ def add_filtered_weighted_unified_examples(full_test_path: str, full_train_path:
         f.writelines(json.dumps(item, ensure_ascii=False) + '\n' for item in test_dataset)
 
 
+def main(dataset_name: str) -> None:
+    FULL_TEST_PATH = 'dataset/{dataset_name}/full_test.jsonl'.format(dataset_name=dataset_name)
+    FULL_TRAIN_PATH = 'dataset/{dataset_name}/full_train.jsonl'.format(dataset_name=dataset_name)
+
+    LLM_NAME = os.environ.get('GPT_4O_MINI_NAME')
+
+    CONCEPTNET_PATH_MAX = 30
+
+    NODE_THRESHOLD = 0.6
+
+    CONCEPTNET_PATH_WEIGHT = 0.5
+    SYNTACTICS_WEIGHT = 0.5
+    K = 10
+
+    add_pattern_pos(FULL_TRAIN_PATH, LLM_NAME)
+    add_pattern_inference(FULL_TEST_PATH, LLM_NAME)
+
+    add_conceptnet_node(FULL_TEST_PATH)
+    add_conceptnet_node(FULL_TRAIN_PATH)
+    add_concept_path(FULL_TEST_PATH, CONCEPTNET_PATH_MAX, NODE_THRESHOLD)
+    add_concept_path(FULL_TRAIN_PATH, CONCEPTNET_PATH_MAX, NODE_THRESHOLD)
+
+    add_filtered_weighted_unified_examples(FULL_TEST_PATH, FULL_TRAIN_PATH, CONCEPTNET_PATH_WEIGHT, SYNTACTICS_WEIGHT, K, LLM_NAME)
+
+
 if __name__ == '__main__':
-    def main(dataset_name: str) -> None:
-        FULL_TEST_PATH = 'dataset/{dataset_name}/full_test.jsonl'.format(dataset_name=dataset_name)
-        FULL_TRAIN_PATH = 'dataset/{dataset_name}/full_train.jsonl'.format(dataset_name=dataset_name)
-
-        LLM_NAME = os.environ.get('GPT_4O_MINI_NAME')
-
-        CONCEPTNET_PATH_MAX = 30
-        
-        NODE_THRESHOLD = 0.6
-
-        CONCEPTNET_PATH_WEIGHT = 0.5
-        SYNTACTICS_WEIGHT = 0.5
-        K = 10
-
-        add_pattern_pos(FULL_TRAIN_PATH, LLM_NAME)
-        add_pattern_inference(FULL_TEST_PATH, LLM_NAME)
-        
-        add_conceptnet_node(FULL_TEST_PATH)
-        add_conceptnet_node(FULL_TRAIN_PATH)
-        add_concept_path(FULL_TEST_PATH, CONCEPTNET_PATH_MAX, NODE_THRESHOLD)
-        add_concept_path(FULL_TRAIN_PATH, CONCEPTNET_PATH_MAX, NODE_THRESHOLD)
-
-        add_filtered_weighted_unified_examples(FULL_TEST_PATH, FULL_TRAIN_PATH, CONCEPTNET_PATH_WEIGHT, SYNTACTICS_WEIGHT, K, LLM_NAME)
-
-
-    main('CTB')
-    # main('ESC - inter')
-    # main('ESC - intra')
+    main(sys.argv[1] if len(sys.argv) > 1 else 'CTB')
