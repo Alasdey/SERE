@@ -28,9 +28,9 @@ def num_tokens_from_string(s: str, encoding_name: str=None, model_name: str=None
 
 
 class GPT4oMini:
-    def __init__(self) -> None:
+    def __init__(self, model_name: str | None = None) -> None:
         self._client = OpenAI(api_key=GPT_KEY, base_url='https://openrouter.ai/api/v1')
-        self._model_name = GPT_4O_MINI_NAME
+        self._model_name = model_name or GPT_4O_MINI_NAME
         self._encoding_name = GPT_4O_ENCODING_NAME
 
     def response(self, question: str, system_prompt: str = None, in_json: bool = False, **kwargs) -> tuple[str, dict[str, int]]:
@@ -63,4 +63,4 @@ class GPT4oMini:
 
 
 def get_llm(name: str) -> object:
-    return GPT4oMini()
+    return GPT4oMini(model_name=name)

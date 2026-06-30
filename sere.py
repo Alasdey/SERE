@@ -1,5 +1,7 @@
 import os
+import shutil
 
+from datetime import datetime
 from typing import Any
 import json
 import re
@@ -18,21 +20,32 @@ random.seed(42)
 
 load_dotenv('env.env')
 
-INFERENCE_LLM_NAME = os.environ.get('GPT_4O_MINI_NAME')
-PREPROCESS_LLM_NAME = os.environ.get('GPT_4O_MINI_NAME')
-
-llm = get_llm(INFERENCE_LLM_NAME)
-
-weighted_unified_retriever = WeightedUnifiedRetriever(llm_name=PREPROCESS_LLM_NAME)
-
 
 def path_to_dataset(dataset_path: str) -> list[dict[str, Any]]:
     with open(dataset_path, mode='r', encoding='utf-8') as f:
         return [json.loads(line) for line in f]
 
 
-def test_all(full_test_path: str, full_train_path: str, output_path: str, inference_llm_name: str, k: int,
+def print_prf1(test_set: list[dict[str, Any]]) -> None:
+    tp = sum(1 for d in test_set if d['pred'] == 1 and d['ground'] == 1)
+    fp = sum(1 for d in test_set if d['pred'] == 1 and d['ground'] == 0)
+    fn = sum(1 for d in test_set if d['pred'] == 0 and d['ground'] == 1)
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+    print(f'Precision: {precision:.4f}')
+    print(f'Recall:    {recall:.4f}')
+    print(f'F1:        {f1:.4f}')
+
+
+def test_all(full_test_path: str, full_train_path: str, output_path: str, inference_llm_name: str,
+             preprocess_llm_name: str, k: int,
              use_cot: bool = False, cot_cache_path: str | None = None) -> None:
+    llm = get_llm(inference_llm_name)
+    weighted_unified_retriever = WeightedUnifiedRetriever(llm_name=preprocess_llm_name)
+
     def test_loop(data: dict[str, Any]) -> None:
         """
         used for multi thread
@@ -88,27 +101,54 @@ def test_all(full_test_path: str, full_train_path: str, output_path: str, infere
     with tqdm_joblib(total=len(test_set)):
         Parallel(n_jobs=10, backend='threading')(delayed(test_loop)(item) for item in test_set)
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    results_dir = os.path.dirname(output_path)
+    os.makedirs(results_dir, exist_ok=True)
     with open(output_path, mode='w', encoding='utf-8') as f:
         f.writelines(json.dumps(data, ensure_ascii=False) + '\n' for data in test_set)
 
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    snapshot_dir = f'{results_dir}_{timestamp}'
+    shutil.copytree(results_dir, snapshot_dir)
+
+    config = {
+        'full_test_path': full_test_path,
+        'full_train_path': full_train_path,
+        'output_path': output_path,
+        'inference_llm_name': inference_llm_name,
+        'preprocess_llm_name': preprocess_llm_name,
+        'k': k,
+        'use_cot': use_cot,
+        'cot_cache_path': cot_cache_path,
+        'timestamp': timestamp,
+    }
+    with open(os.path.join(snapshot_dir, 'config.json'), mode='w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+    print_prf1(test_set)
+
 
 if __name__ == '__main__':
-    DATASET_NAME = 'CTB'
+    # DATASET_NAME = 'CTB'
     # DATASET_NAME = 'ESC - inter'
-    # DATASET_NAME = 'ESC - intra'
+    DATASET_NAME = 'ESC - intra'
 
     METHOD_NAME = 'weighted_unified'
+
+    # INFERENCE_LLM_NAME = os.environ.get('GPT_4O_MINI_NAME')
+    # INFERENCE_LLM_NAME = "openai/gpt-4o-mini"
+    # INFERENCE_LLM_NAME = "deepseek/deepseek-v4-pro"
+    INFERENCE_LLM_NAME = "deepseek/deepseek-v3.2"
+    PREPROCESS_LLM_NAME = os.environ.get('GPT_4O_MINI_NAME')
 
     FULL_TEST_PATH = 'dataset/{dataset_name}/full_test.jsonl'.format(dataset_name=DATASET_NAME)
     FULL_TRAIN_PATH = 'dataset/{dataset_name}/full_train.jsonl'.format(dataset_name=DATASET_NAME)
 
     OUTPUT_PATH = 'dataset/{dataset_name}/results/{method_name}.jsonl'.format(dataset_name=DATASET_NAME, method_name=METHOD_NAME)
 
-    K = 2
+    K = 5
 
-    USE_COT = False
+    USE_COT = True
     COT_CACHE_PATH = 'dataset/{dataset_name}/cot_cache.json'.format(dataset_name=DATASET_NAME)
 
-    test_all(FULL_TEST_PATH, FULL_TRAIN_PATH, OUTPUT_PATH, PREPROCESS_LLM_NAME, K,
+    test_all(FULL_TEST_PATH, FULL_TRAIN_PATH, OUTPUT_PATH, INFERENCE_LLM_NAME, PREPROCESS_LLM_NAME, K,
              use_cot=USE_COT, cot_cache_path=COT_CACHE_PATH)
