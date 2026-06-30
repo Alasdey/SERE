@@ -199,6 +199,27 @@ Give your reasoning path step-by-step (and analyze all the pattern rules ONE-BY-
     return prompt
 
 
+def causal_inference_prompt_no_examples(text: str, source: str, target: str) -> str:
+    """
+    Same instructions/voice as predict_by_structured_examples_prompt (no pattern-rule taxonomy),
+    but without fewshot examples. Used by utils/cot_synthesis.py so the reasoning it synthesizes
+    for fewshot CoT matches what the prediction prompt actually teaches the model.
+    """
+    prompt = '''Given a text, two events (Event X and Event Y), you need to determine whether there is a causal relationship between the given events X and Y.
+###
+Instructions:
+You should give step-by-step reasoning path before giving the final answer.
+###
+Text: {text};
+Event X: {source};
+Event Y: {target};
+Give step-by-step reasoning path, and then organize the final answer in JSON format: {{"Answer": "Your answer, the answer must be either 'Yes' or 'No', and nothing else."}}
+Your response:
+'''
+
+    return prompt.format(text=text, source=source, target=target)
+
+
 def predict_by_structured_examples_prompt(text: str, source: str, target: str, examples: list[dict[str, Any]], use_cot: bool = False) -> str:
     instruction_prompt = '''Given a text, two events (Event X and Event Y). Based on the related examples, you need to determine whether there is a causal relationship between the given events X and Y. Please follow the instructions below and refer to the provided examples when answering.
 ###

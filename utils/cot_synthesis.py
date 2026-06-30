@@ -18,7 +18,7 @@ import json
 from joblib import Parallel, delayed
 from tqdm_joblib import tqdm_joblib
 
-from utils.prompt import pattern_prompt_inference
+from utils.prompt import causal_inference_prompt_no_examples
 
 _COT_CACHE: dict[str, str] = {}
 
@@ -26,18 +26,17 @@ _COT_GOLD_HINT = (
     'The correct answer for this example is: "{answer}" (i.e. there {is_or_isnt} a causal '
     "relationship between EVENT X and EVENT Y).\n\n"
     "Write your step-by-step reasoning so that it leads naturally to this answer from the text "
-    "alone, analyzing the pattern rules as instructed above. Do not mention or imply that you "
-    "already know the answer, and do not output any JSON — just write the reasoning narrative."
+    "alone, as instructed above. Do not mention or imply that you already know the answer, and "
+    "do not output any JSON — just write the reasoning narrative."
 )
 
 _COT_DECONTAM_PROMPT = (
     "Rewrite the following reasoning from scratch to remove all privileged knowledge:\n\n"
     "{raw}\n\n"
     'Replace any phrasing that reveals foreknowledge (e.g. "the answer is", "we know that", '
-    '"as expected", "this confirms") with genuine reasoning grounded in the text and the causal '
-    "pattern rules. Every sentence should read as if the conclusion were discovered through "
-    "analysis, not confirmed from a pre-known answer. Output only the rewritten reasoning, "
-    "nothing else."
+    '"as expected", "this confirms") with genuine reasoning grounded in the text alone. Every '
+    "sentence should read as if the conclusion were discovered through analysis, not confirmed "
+    "from a pre-known answer. Output only the rewritten reasoning, nothing else."
 )
 
 
@@ -73,7 +72,7 @@ def generate_cot_for_example(example: dict[str, Any], llm: object) -> str:
         return _COT_CACHE[unique_id]
 
     answer = "Yes" if example["ground"] == 1 else "No"
-    inference_prompt = pattern_prompt_inference(example["input_text"], example["source"], example["target"])
+    inference_prompt = causal_inference_prompt_no_examples(example["input_text"], example["source"], example["target"])
     gold_hint = _COT_GOLD_HINT.format(answer=answer, is_or_isnt="is" if answer == "Yes" else "is not")
 
     raw, _ = llm.response(f"{inference_prompt}\n\n{gold_hint}")
